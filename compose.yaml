@@ -1,0 +1,53 @@
+# The alternative to the broker inside each image: one broker, and every
+# language pointed at it.
+#
+#   docker compose up -d --wait broker
+#   docker compose run --rm python step 3
+#   docker compose run --rm java step 3
+#   docker compose down
+#
+# Each image still carries its own broker; TUTORIAL_BROKER=external keeps it off
+# and ACEMQ_URL (AMQP_URL for Java) points the examples here instead. Image tags
+# are the library versions in pins.env.
+x-tutorial: &tutorial
+  depends_on:
+    broker:
+      condition: service_healthy
+  environment:
+    TUTORIAL_BROKER: external
+    ACEMQ_URL: amqp://guest:guest@broker:5672
+    AMQP_URL: amqp://guest:guest@broker:5672
+  profiles: [tutorial]
+
+services:
+  broker:
+    image: rabbitmq:4.3.6-management
+    environment:
+      # The Erlang cookie on the command line rather than in a file under HOME,
+      # which is not writable on every Docker setup.
+      RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS: -setcookie acemq-tutorials
+      RABBITMQ_CTL_ERL_ARGS: -setcookie acemq-tutorials
+    ports:
+      - "${BROKER_AMQP_PORT:-5672}:5672"
+      - "${BROKER_UI_PORT:-15672}:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "check_port_connectivity"]
+      interval: 5s
+      timeout: 10s
+      retries: 24
+
+  java:
+    <<: *tutorial
+    image: ghcr.io/acemq-company/acemq-tutorials-java:0.7.15
+  python:
+    <<: *tutorial
+    image: ghcr.io/acemq-company/acemq-tutorials-python:0.7.12
+  ruby:
+    <<: *tutorial
+    image: ghcr.io/acemq-company/acemq-tutorials-ruby:0.7.14
+  dotnet:
+    <<: *tutorial
+    image: ghcr.io/acemq-company/acemq-tutorials-dotnet:0.7.13
+  go:
+    <<: *tutorial
+    image: ghcr.io/acemq-company/acemq-tutorials-go:0.9.9

@@ -1,0 +1,152 @@
+#!/usr/bin/env bash
+# The entrypoint of every acemq-tutorials-<lang> image.
+#
+#   tutorial                 list the steps
+#   tutorial step 3          start the broker, run step 3, exit with its status
+#   tutorial step 3 --keep   ... then keep the broker up for the management UI
+#   tutorial all             every step in order (what CI runs)
+#   tutorial shell           the broker, then a shell in the examples checkout
+#   tutorial broker          the broker alone, in the foreground
+#   tutorial version         what this image was built from
+#
+# The same script serves all five images. TUTORIAL_LANG, set by each image's
+# Dockerfile, picks how an example is run; everything else is shared.
+set -euo pipefail
+
+ROOT=/tutorials
+EXAMPLES="$ROOT/examples"
+LANG_ID="${TUTORIAL_LANG:?TUTORIAL_LANG is set by the image}"
+BROKER_LOG=/var/log/rabbitmq/tutorial-broker.log
+
+# Data lines of a path file: comments and blank lines dropped.
+rows() { grep -v -e '^#' -e '^[[:space:]]*$' "$ROOT/path/$1"; }
+
+steps_list() {
+  echo "AceMQ tutorials — $LANG_ID, library $(cat "$ROOT/LIBRARY_VERSION")"
+  echo
+  rows steps.tsv | while IFS=$'\t' read -r n title summary _; do
+    printf '  %s  %-28s %s\n' "$n" "$title" "$summary"
+  done
+  echo
+  echo "Run one:  docker run --rm -p 15672:15672 <this image> step 1"
+  echo "Read on:  https://acemq.org/acemq-tutorials/"
+}
+
+examples_of() { rows examples.tsv | awk -F'\t' -v n="$1" -v l="$LANG_ID" '$1==n && $2==l {print $3}'; }
+
+# The broker runs as the rabbitmq user, as it does in the image this one is
+# built on. The cookie is passed on the command line to the server and to every
+# CLI tool rather than read from a file: a cookie file depends on HOME being
+# writable and owned just so, and when it is not RabbitMQ dies with an "eacces"
+# that says nothing useful. The variables are set in the Dockerfile so a shell
+# opened with `tutorial shell` gets them too.
+start_broker() {
+  # TUTORIAL_BROKER=external: ACEMQ_URL names a broker somewhere else (the
+  # compose file sets this), so the one in the image stays off.
+  if [ "${TUTORIAL_BROKER:-}" = external ]; then return 0; fi
+  if (exec 3<>/dev/tcp/127.0.0.1/5672) 2>/dev/null; then return 0; fi
+  echo "Starting RabbitMQ (log: $BROKER_LOG) ..."
+  mkdir -p "$(dirname "$BROKER_LOG")"
+  chown rabbitmq:rabbitmq /var/lib/rabbitmq "$(dirname "$BROKER_LOG")"
+  gosu rabbitmq rabbitmq-server >"$BROKER_LOG" 2>&1 &
+  # The AMQP listener is the last thing a node opens on boot, so a port that
+  # accepts a connection is a broker that is ready for one.
+  for _ in $(seq 1 120); do
+    if (exec 3<>/dev/tcp/127.0.0.1/5672) 2>/dev/null; then
+      echo "RabbitMQ is up. Management UI: http://localhost:15672 (guest/guest)"
+      return 0
+    fi
+    kill -0 $! 2>/dev/null || break
+    sleep 1
+  done
+  echo "RabbitMQ did not start. The end of its log:" >&2
+  tail -n 40 "$BROKER_LOG" >&2
+  exit 1
+}
+
+# How one example is run, per language. Each runs from where the examples
+# repository's own README runs it, so its relative paths mean what they say.
+run_example() {
+  local dir="$1"
+  cd "$EXAMPLES"
+  case "$LANG_ID" in
+    java)   cd "$dir" && java -cp "target/classes:target/dependency/*" "$(cat target/main-class)" ;;
+    python) /opt/venv/bin/python "$dir/main.py" ;;
+    ruby)   bundle exec ruby "$dir/main.rb" ;;
+    dotnet) dotnet run --no-build -c Release --project "$dir" ;;
+    go)     "$ROOT/bin/${dir//\//_}" ;;
+    *)      echo "unknown language $LANG_ID" >&2; return 2 ;;
+  esac
+}
+
+run_step() {
+  local n="$1" title dirs dir
+  title="$(rows steps.tsv | awk -F'\t' -v n="$n" '$1==n {print $2}')"
+  dirs="$(examples_of "$n")"
+  if [ -z "$title" ] || [ -z "$dirs" ]; then
+    echo "There is no step $n. These are the steps:" >&2
+    steps_list >&2
+    return 2
+  fi
+  for dir in $dirs; do
+    echo
+    echo "=== Step $n — $title: $dir"
+    echo "    https://github.com/AceMQ-Company/acemq-$LANG_ID-amqp-examples/tree/$(cat "$ROOT/EXAMPLES_COMMIT")/$dir"
+    echo
+    if ! (run_example "$dir"); then
+      echo
+      echo "=== Step $n FAILED in $dir" >&2
+      return 1
+    fi
+  done
+  echo
+  echo "=== Step $n passed"
+}
+
+keep_broker() {
+  echo
+  echo "The broker stays up for the management UI at http://localhost:15672 (guest/guest). Ctrl-C to stop."
+  tail -f /dev/null
+}
+
+cmd="${1:-list}"
+[ $# -gt 0 ] && shift
+case "$cmd" in
+  list|help|-h|--help) steps_list ;;
+  version)
+    echo "language        $LANG_ID"
+    echo "library         $(cat "$ROOT/LIBRARY_VERSION")"
+    echo "examples commit $(cat "$ROOT/EXAMPLES_COMMIT")"
+    rabbitmq-diagnostics --version 2>/dev/null | sed 's/^/rabbitmq        /' || true
+    ;;
+  step)
+    [ $# -ge 1 ] || { echo "usage: tutorial step <n> [--keep]" >&2; exit 2; }
+    start_broker
+    status=0; run_step "$1" || status=$?
+    if [ "${2:-}" = "--keep" ]; then keep_broker; fi
+    exit "$status"
+    ;;
+  all)
+    start_broker
+    for n in $(rows steps.tsv | cut -f1); do run_step "$n"; done
+    echo; echo "=== Every step passed"
+    ;;
+  shell)
+    start_broker
+    cd "$EXAMPLES"
+    exec bash
+    ;;
+  broker)
+    exec gosu rabbitmq rabbitmq-server
+    ;;
+  dirs)
+    # Every example directory this language's steps use, once each. The
+    # Dockerfile builds exactly these.
+    rows examples.tsv | awk -F'\t' -v l="$LANG_ID" '$2==l {print $3}' | sort -u
+    ;;
+  *)
+    echo "unknown command: $cmd" >&2
+    steps_list >&2
+    exit 2
+    ;;
+esac

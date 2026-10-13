@@ -1,0 +1,56 @@
+# Which example in which examples repository each step runs, tab-separated:
+#   step  language  directory-in-the-examples-repository
+# A step may run several, in the order listed. Directories are at the commit
+# pins.env names for that language; nothing here is copied.
+1	java	basic/01-publish-and-confirm
+1	python	basic/01-publish-and-consume
+1	ruby	basic/01-publish-and-consume
+1	dotnet	basic/01-publish-and-consume-csharp
+1	go	basic/01-publish-and-consume
+2	java	basic/05-idempotent-consumer
+2	python	intermediate/02-idempotent-consumer
+2	ruby	intermediate/02-idempotent-consumer
+2	dotnet	basic/03-idempotent-consumer-csharp
+2	go	intermediate/02-idempotent-consumer
+3	java	basic/03-retries-and-dead-letters
+3	java	basic/04-replay
+3	python	basic/02-retries-and-dead-letters
+3	python	basic/04-replay
+3	ruby	basic/02-retries-and-dead-letters
+3	ruby	basic/05-replay
+3	dotnet	basic/02-retries-and-dead-letters-csharp
+3	dotnet	basic/04-replay-csharp
+3	go	basic/02-retries-and-dead-letters
+3	go	basic/04-replay
+4	java	intermediate/11-request-and-reply
+4	python	intermediate/01-request-reply
+4	ruby	intermediate/01-request-reply
+4	dotnet	intermediate/03-request-reply-csharp
+4	go	intermediate/01-request-reply
+5	java	basic/09-streams
+5	python	basic/06-streams
+5	ruby	basic/06-streams
+5	dotnet	basic/07-streams-csharp
+5	go	basic/06-streams
+6	java	basic/06-transactional-outbox
+6	java	intermediate/12-saga
+6	java	intermediate/13-scheduling
+6	python	intermediate/03-transactional-outbox
+6	python	intermediate/06-saga
+6	python	intermediate/05-scheduler
+6	ruby	intermediate/03-outbox
+6	ruby	intermediate/06-saga
+6	ruby	intermediate/07-scheduling
+6	dotnet	basic/05-transactional-outbox-csharp
+6	dotnet	intermediate/04-saga-csharp
+6	dotnet	intermediate/05-scheduling-csharp
+6	go	intermediate/03-outbox
+6	go	intermediate/04-saga
+6	go	intermediate/05-scheduling
+7	java	intermediate/03-telemetry
+7	python	advanced/03-metrics-and-health
+7	python	advanced/04-tracing
+7	ruby	advanced/03-observability
+7	dotnet	intermediate/09-telemetry-csharp
+7	go	advanced/02-metrics-and-health
+7	go	advanced/06-tracing

@@ -1,0 +1,95 @@
+:root {
+  color-scheme: light dark;
+  --fg:#1a1a1a; --bg:#fff; --muted:#5f5f5f; --line:#e4e4e4;
+  --accent:#b4451f; --code-bg:#f7f7f5; --nav-bg:#fbfbfa;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --fg:#e8e8e8; --bg:#161616; --muted:#9c9c9c; --line:#2d2d2d;
+          --accent:#ff8a5c; --code-bg:#1e1e1e; --nav-bg:#1b1b1b; }
+}
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:var(--fg);
+       font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; }
+nav.top { background:var(--nav-bg); border-bottom:1px solid var(--line);
+          padding:.85rem 1.25rem; display:flex; gap:1.15rem; flex-wrap:wrap; align-items:baseline;
+          position:sticky; top:0; z-index:10; }
+nav.top .brand { display:inline-flex; align-items:center; gap:.5rem; font-weight:700;
+                 letter-spacing:-.01em; margin-right:.5rem; }
+nav.top .brand img { height:22px; width:auto; display:block; }
+/* The mark is black on transparent, so it disappears against a dark page.
+   Inverting is enough for a two-tone logo and avoids shipping a second file. */
+@media (prefers-color-scheme: dark) { nav.top .brand img { filter: invert(1) brightness(1.15); } }
+nav.top a { color:var(--fg); text-decoration:none; font-size:.9rem; opacity:.78; }
+nav.top a:hover { opacity:1; color:var(--accent); }
+nav.top a.enterprise { color:var(--fg); opacity:.78; }
+nav.top a.enterprise:hover { opacity:1; color:var(--accent); }
+/* The right-hand group: the destinations somebody arrives looking for, rather
+   than the page-by-page guide. Tutorials carries the auto margin, so the group
+   stays together however many guide pages are added to its left. */
+nav.top a.tutorials { color:var(--accent); opacity:1; font-weight:600; }
+nav.top a.api { color:var(--accent); opacity:1; font-weight:600; }
+
+/* Grouped navigation. No JavaScript: the menu opens on hover and on focus-within,
+   so a keyboard reaches it and a blocked script cannot break it. */
+nav.top .group { position:relative; display:inline-block; }
+nav.top .group > button { font:inherit; font-size:.9rem; color:var(--fg); opacity:.78;
+  background:none; border:0; padding:0; cursor:pointer; }
+nav.top .group > button::after { content:" \25be"; font-size:.8em; opacity:.7; }
+nav.top .group:hover > button, nav.top .group:focus-within > button {
+  opacity:1; color:var(--accent); }
+nav.top .group .menu { display:none; position:absolute; left:0; top:100%; z-index:20;
+  background:var(--nav-bg); border:1px solid var(--line); border-radius:8px;
+  padding:.4rem 0; min-width:15rem; box-shadow:0 6px 24px rgba(0,0,0,.12); }
+nav.top .group:hover .menu, nav.top .group:focus-within .menu { display:block; }
+nav.top .group .menu a { display:block; padding:.35rem 1rem; opacity:.85; white-space:nowrap; }
+nav.top .group .menu a:hover { background:var(--code-bg); opacity:1; }
+nav.top a.enterprise:first-of-type { margin-left:auto; }
+
+/* On a narrow screen the menus would hang off the edge, so everything unfolds
+   into a list instead of pretending to be a menu bar. */
+@media (max-width: 900px) {
+  nav.top { flex-wrap:wrap; }
+  nav.top .group { position:static; }
+  nav.top .group .menu { position:static; display:block; border:0; box-shadow:none;
+    padding:0; background:none; min-width:0; }
+  nav.top .group > button { display:none; }
+  nav.top .group .menu a { display:inline-block; padding:0; }
+  nav.top a.enterprise:first-of-type { margin-left:0; }
+}
+main { max-width:47rem; margin:0 auto; padding:2.5rem 1.25rem 5rem; }
+h1 { font-size:2rem; letter-spacing:-.025em; margin:0 0 1.5rem; }
+h2 { font-size:1.3rem; letter-spacing:-.015em; margin:2.75rem 0 .85rem;
+     padding-top:.4rem; border-top:1px solid var(--line); }
+h3 { font-size:1.05rem; margin:1.75rem 0 .6rem; }
+p, li { color:var(--fg); }
+a { color:var(--accent); }
+pre { background:var(--code-bg); border:1px solid var(--line); border-radius:8px;
+      padding:1rem 1.15rem; overflow-x:auto; font-size:.855rem; line-height:1.55; }
+code { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:.9em; }
+p code, li code, td code { background:var(--code-bg); border:1px solid var(--line);
+      border-radius:4px; padding:.08em .35em; color:var(--accent); }
+pre code { background:none; border:none; padding:0; color:inherit; }
+table { border-collapse:collapse; width:100%; font-size:.92rem; display:block; overflow-x:auto; }
+th,td { text-align:left; padding:.55rem .8rem; border-bottom:1px solid var(--line); vertical-align:top; }
+th { color:var(--muted); font-weight:600; }
+blockquote { border-left:3px solid var(--line); margin:1.25rem 0; padding:.2rem 0 .2rem 1.15rem; color:var(--muted); }
+footer { max-width:47rem; margin:0 auto; padding:1.5rem 1.25rem 4rem;
+         border-top:1px solid var(--line); color:var(--muted); font-size:.85rem; }
+
+/* Pandoc writes its own syntax colours into a <style> block in the head, and
+   they are tuned for a white page: numbers, floats and base-n literals are all
+   #0000cf, which on this page's dark background is about 1.4:1 against it —
+   `timedelta(seconds=1)` reads as `timedelta(seconds= )`. This stylesheet is
+   linked after that block, so redefining the handful of colours that go dark
+   is enough; the light palette is left exactly as pandoc chose it. */
+@media (prefers-color-scheme: dark) {
+  code span.dv, code span.bn, code span.fl { color:#b5cea8; }   /* literals */
+  code span.st, code span.ch, code span.vs { color:#a3d18a; }   /* strings */
+  code span.co, code span.cn                { color:#9c9c9c; }   /* comments */
+  code span.kw, code span.cf                { color:#7fb3ff; }   /* keywords */
+  code span.dt, code span.bu                { color:#7fd4c1; }   /* types */
+  code span.fu                              { color:#dcb6ff; }   /* functions */
+  code span.at, code span.va                { color:#e8e8e8; }
+  code span.op, code span.sc                { color:#c9c9c9; }
+  code span.er, code span.al                { color:#ff8a5c; }
+}

@@ -1,0 +1,11 @@
+# The learning path. One line per step, tab-separated:
+#   step  title  summary  library-docs-pages
+# library-docs-pages names pages every library's docs site has, by basename,
+# comma-separated. The examples each step runs are in examples.tsv.
+1	Your first message	Connect, declare, publish with a confirm, consume, acknowledge.	tutorial-first-message,publishing,consuming
+2	Never processing twice	Redelivery is normal; an idempotent consumer makes it harmless.	tutorial-exactly-once,reliability
+3	Surviving failure	A retry ladder that does not block the queue, dead letters, and replaying them.	tutorial-surviving-failure,reliability
+4	Request and reply	A call over the broker with a correlation id, a reply queue and a timeout.	request-reply
+5	Streams	An append-only log you can read from any offset, and read again.	streams
+6	Outbox, saga and scheduler	Publish and commit together, compensate a multi-step workflow, deliver later.	tutorial-exactly-once,patterns
+7	Seeing what happens	Metrics, health and traces, and reading them when something is wrong.	tutorial-observability,observability
