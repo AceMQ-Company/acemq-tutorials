@@ -9,8 +9,12 @@ else. Images are tagged with the library version they carry.
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-10-13
+
 ### Changed
 
+- Rebuilt on the same library versions — Java `0.7.15`, Python `0.7.12`, Ruby
+  `0.7.14`, .NET `0.7.13`, Go `0.9.9` — from the examples tags below.
 - The examples are pinned by tag, not by commit: `examples-v<library version>`
   in each examples repository, which names the release it was verified on and
   is never moved. `etc/check-pins.sh` checks that the tag is for the pinned
