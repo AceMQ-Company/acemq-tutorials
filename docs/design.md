@@ -13,8 +13,8 @@ at the exact version an image was built from.
 - For every language, an image that runs any step with one command and nothing
   installed but Docker — toolchain, library, tutorial code and a broker inside.
 - A site listing the path, each step showing the five languages side by side
-  and linking to the example at its pinned commit and to the library's own
-  tutorial and guide pages.
+  and linking to the example at its pinned examples tag and to the library's
+  own tutorial and guide pages.
 
 ## The path
 
@@ -45,7 +45,7 @@ happen, so a step that passes is a step that taught what it says.
 .NET runs the C# example of each pair. The Visual Basic twin is the same
 program, and is linked from the examples repository's README.
 
-## Aggregation: pinned commits, fetched at build time
+## Aggregation: pinned tags, fetched at build time
 
 Three options were weighed.
 
@@ -57,15 +57,34 @@ Three options were weighed.
 | CI and the site can read the pin without git | no | yes | **yes** |
 
 **Fetch at build time** won. `pins.env` names, per language, the library
-release and the commit of the examples repository that tracks it. The
-Dockerfile `ADD`s that repository at that commit, BuildKit's git source, so the
-image holds exactly what that repository's CI ran. The site builder reads the
-same commit from `raw.githubusercontent.com` for each example's one-paragraph
-description, and links to the tree at that commit.
+release and the tag of the examples repository verified against it.
+`etc/build-image.sh` resolves the tag to its commit and the Dockerfile `ADD`s
+that repository at that commit, BuildKit's git source, so the image holds
+exactly what that repository's CI ran and `tutorial version` prints the commit.
+The site builder reads the same tag from `raw.githubusercontent.com` for each
+example's one-paragraph description, and links to the tree at that tag.
 
-Commits rather than tags because the examples repositories are not tagged:
-each one moves its library pin in a commit and nothing more. A commit is as
-immutable as a tag and needs no release process in five other repositories.
+### Examples tags
+
+The pins started as commits, because the examples repositories had no tags.
+They have one now for every library release they are verified on:
+`examples-v<library version>` — `examples-v0.7.15` on acemq-java-amqp-examples
+is the commit whose `pom.xml` pins 0.7.15, tagged once its CI passed there. A
+later fix worth having at the same release is `examples-v0.7.15-r2`, and the
+highest revision wins. Each examples repository's README says so under
+*Versions*.
+
+- **Why a tag at all:** a commit says nothing about what it was verified
+  against; a tag names the release, so `check-pins.sh` can refuse a pin whose
+  examples are for another version, and a script can find the right one for a
+  new release without reading five repositories' history.
+- **Why `examples-v` and not `v`:** a plain `v0.7.15` in an examples
+  repository reads as a release of that repository, which it is not, and in
+  the Go one it *is* one to Go's module proxy, which caches a version for ever.
+- **Immutable:** annotated, never moved, re-pointed or deleted. A mistake is
+  corrected by the next `-r<n>`. The build still records the commit the tag
+  named, so even a tag moved against the rule could not change what an image
+  says it was built from.
 
 ## The images
 
@@ -77,7 +96,7 @@ a target per language (`images/Dockerfile`). Each is:
    — and the toolchains are not: Python, Ruby and their build tools are Ubuntu
    packages, and the JDK, Maven, the .NET SDK and Go are self-contained
    directories copied out of their own official images.
-2. **The examples at the pinned commit**, built once at image build time —
+2. **The examples at the commit the pinned tag names**, built once at image build time —
    Maven compiles and copies each module's runtime classpath, the .NET projects
    are built in Release, Go builds a binary per example, Python gets a venv,
    Ruby gets its bundle. A step then starts a process rather than a build.
@@ -132,10 +151,17 @@ goes to any library feed.
 
 - **`etc/check-pins.sh` — the pins are the newest releases.** For each
   language: the pinned version is the newest `vX.Y.Z` tag of the library; the
-  pinned examples commit's own manifest names that version; and every image tag
-  written into the README, the docs or `compose.yaml` is the pinned one. It runs
-  on every push and on a weekly schedule, because a library release moves
-  underneath this repository without a commit landing here.
+  pinned examples tag is one for that version, exists, and names a commit whose
+  own manifest pins it; and every image tag written into the README, the docs
+  or `compose.yaml` is the pinned one. It runs on every push and on a weekly
+  schedule, because a library release moves underneath this repository without
+  a commit landing here.
+- **`bump-pins.yml` — and they are moved for you.** Daily, it finds each
+  language's newest release and the examples tag for it, and where those are
+  not the pins it rewrites them, runs `check-pins.sh` and every step of the
+  moved languages — `steps.yml`, the job CI runs — and fast-forwards main only
+  if all of that passed. A release without an examples tag is named in the run
+  summary and left alone.
 - **Every step runs in CI.** Each image is built and `tutorial all` runs every
   step against its bundled broker. A release builds both architectures on
   native runners and runs the same smoke test on each before anything is pushed.
@@ -146,7 +172,7 @@ goes to any library feed.
 ## Layout
 
 ```
-pins.env               every version: library releases, examples commits, broker
+pins.env               every version: library releases, examples tags, broker
 path/steps.tsv         the steps
 path/examples.tsv      step × language → example directories
 images/Dockerfile      one target per language
@@ -156,12 +182,15 @@ docs/                  the site's hand-written pages
 etc/build-image.sh     build one image from pins.env
 etc/build-site.sh      render the site into site/
 etc/check-pins.sh      the pins are the newest releases
+etc/bump-pins.py       move the pins to the newest tagged releases
+.github/workflows/     ci, steps (called by ci and bump-pins), bump-pins, docs, release
 ```
 
 ## Updating for a library release
 
-1. The library releases; its examples repository moves its pin in a commit.
-2. `./etc/check-pins.sh` goes red and says what to set.
-3. Set `<LANG>_VERSION` and `<LANG>_EXAMPLES` in `pins.env`, and the image tags
-   it names.
-4. CI builds and runs the image. Tag a release to publish it.
+1. The library releases; its examples repository moves its pin in a commit
+   and, once CI is green on it, tags it `examples-v<version>`.
+2. `bump-pins.yml`, the next morning or on demand, moves `pins.env`, the image
+   tags and the CHANGELOG, verifies, and lands it on main. Until the examples
+   tag exists, `check-pins.sh` is red and says the tag is what is missing.
+3. Cut a tutorials release to publish the images: [RELEASING.md](https://github.com/AceMQ-Company/acemq-tutorials/blob/main/RELEASING.md).

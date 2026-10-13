@@ -52,12 +52,12 @@ in the language's examples repository —
 [Ruby](https://github.com/AceMQ-Company/acemq-ruby-amqp-examples),
 [.NET](https://github.com/AceMQ-Company/acemq-dotnet-amqp-examples),
 [Go](https://github.com/AceMQ-Company/acemq-go-amqp-examples) —
-fetched at a pinned commit when an image is built. The prose is each library's
+fetched at a pinned tag when an image is built. The prose is each library's
 own documentation, linked from every step. Nothing is copied.
 
 | File | |
 |---|---|
-| [`pins.env`](pins.env) | every version: library releases, examples commits, broker |
+| [`pins.env`](pins.env) | every version: library releases, examples tags, broker |
 | [`path/`](path) | the steps, and which examples each step runs per language |
 | [`images/`](images) | the Dockerfile (a target per language) and the `tutorial` entrypoint |
 | [`docs/`](docs) | the site's pages; [`docs/design.md`](docs/design.md) is the design |
@@ -71,8 +71,10 @@ docker run --rm ghcr.io/acemq-company/acemq-tutorials-go:0.9.9 all
 ```
 
 CI builds every image and runs every step against its bundled broker, and checks
-that the pins are the newest releases — on every push and every Monday. A
-`vX.Y.Z` tag publishes the images. What is left is in [ROADMAP.md](ROADMAP.md).
+that the pins are the newest releases — on every push and every Monday. Every
+day, `bump-pins` moves the pins to any newer release whose examples repository
+has tagged it, after running every step. A `vX.Y.Z` tag publishes the images:
+see [RELEASING.md](RELEASING.md). What is left is in [ROADMAP.md](ROADMAP.md).
 
 ## Licence
 

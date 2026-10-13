@@ -6,9 +6,9 @@
 # Built the way the libraries build theirs -- pandoc over docs/*.md with the
 # same stylesheet -- plus one page per step, generated from path/*.tsv and
 # pins.env. A step page holds no tutorial prose of its own: it says what the
-# step is, how to run it, and links to the example at the pinned commit and to
+# step is, how to run it, and links to the example at the pinned examples tag and to
 # each library's own tutorial. The one-paragraph lead of each example's README
-# is quoted from that commit, so the page says what the example shows without
+# is quoted from that tag, so the page says what the example shows without
 # anybody keeping a second copy of it.
 #
 # Needs pandoc, python3 and network access to raw.githubusercontent.com.
@@ -42,13 +42,13 @@ steps = list(rows("steps.tsv"))
 examples = list(rows("examples.tsv"))
 
 def version(lang): return pins[f"{lang.upper()}_VERSION"]
-def commit(lang): return pins[f"{lang.upper()}_EXAMPLES"]
+def tag(lang): return pins[f"{lang.upper()}_EXAMPLES"]
 def image(lang): return f"ghcr.io/acemq-company/acemq-tutorials-{lang}:{version(lang)}"
-def tree(lang, d): return f"https://github.com/AceMQ-Company/acemq-{lang}-amqp-examples/tree/{commit(lang)}/{d}"
+def tree(lang, d): return f"https://github.com/AceMQ-Company/acemq-{lang}-amqp-examples/tree/{tag(lang)}/{d}"
 def docs(lang, page): return f"https://acemq.org/acemq-{lang}-amqp/{page}.html"
 
 def fetch(lang, path):
-    url = f"https://raw.githubusercontent.com/AceMQ-Company/acemq-{lang}-amqp-examples/{commit(lang)}/{path}"
+    url = f"https://raw.githubusercontent.com/AceMQ-Company/acemq-{lang}-amqp-examples/{tag(lang)}/{path}"
     try:
         return urllib.request.urlopen(url, timeout=30).read().decode()
     except urllib.error.HTTPError as e:
@@ -57,7 +57,7 @@ def fetch(lang, path):
         raise
 
 def lead(lang, d):
-    """What the example shows, in its own repository's words, at the pinned commit:
+    """What the example shows, in its own repository's words, at the pinned tag:
     the first paragraph of its README, or -- for an example without one -- its row
     in the table of examples in the repository's README."""
     text = fetch(lang, f"{d}/README.md")
@@ -98,7 +98,7 @@ for n, title, summary, pages in steps:
     out.append("")
     for lang, name in langs:
         out += [f"## {name}", "", f"`acemq-{lang}-amqp` {version(lang)}, "
-                f"[acemq-{lang}-amqp-examples@{commit(lang)[:7]}](https://github.com/AceMQ-Company/acemq-{lang}-amqp-examples/tree/{commit(lang)}).", ""]
+                f"[acemq-{lang}-amqp-examples {tag(lang)}](https://github.com/AceMQ-Company/acemq-{lang}-amqp-examples/tree/{tag(lang)}).", ""]
         for d in [e[2] for e in examples if e[0] == n and e[1] == lang]:
             out += [f"### [`{d}`]({tree(lang, d)})", "", lead(lang, d), ""]
     open(f"{gen}/step-{n}.md", "w").write("\n".join(out))
@@ -108,10 +108,10 @@ for n, title, summary, _ in steps:
     table.append(f"| {n} | [{title}](step-{n}.md) | {summary} |")
 open(f"{gen}/path.md", "w").write("\n".join(table) + "\n")
 
-images = ["| Language | Image | Library | Examples commit |", "|---|---|---|---|"]
+images = ["| Language | Image | Library | Examples |", "|---|---|---|---|"]
 for lang, name in langs:
     images.append(f"| {name} | `{image(lang)}` | [acemq-{lang}-amqp {version(lang)}](https://github.com/AceMQ-Company/acemq-{lang}-amqp/releases/tag/v{version(lang)}) "
-                  f"| [`{commit(lang)[:7]}`](https://github.com/AceMQ-Company/acemq-{lang}-amqp-examples/tree/{commit(lang)}) |")
+                  f"| [`{tag(lang)}`](https://github.com/AceMQ-Company/acemq-{lang}-amqp-examples/tree/{tag(lang)}) |")
 open(f"{gen}/images.md", "w").write("\n".join(images) + "\n")
 print(f"generated {len(steps)} step pages")
 PY
@@ -149,7 +149,7 @@ FOOT='</main>
 <footer>
   <a href="https://github.com/AceMQ-Company/acemq-tutorials">acemq-tutorials</a> &mdash;
   Apache-2.0, and provided without warranty &mdash; see the <a href="licence.html">licence</a>.
-  The examples live in each library&rsquo;s examples repository and are linked at the commit the images were built from.
+  The examples live in each library&rsquo;s examples repository and are linked at the tag the images were built from.
   RabbitMQ is a trademark of its owner. This project is not affiliated with it.
 </footer>'
 

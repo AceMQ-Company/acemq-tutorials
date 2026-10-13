@@ -11,25 +11,15 @@ These are not this repository's to fix; each is the examples repository's.
   The path folds confirms into step 1 because every library confirms by
   default, but a step of its own on what a nack, a timeout and `mandatory` look
   like would need an example in the other four.
-- **Twelve examples on the path have no README.md of their own**, so the step
-  pages describe them with their row from the repository's table of examples:
-  - .NET: `basic/01-publish-and-consume-csharp`, `basic/02-retries-and-dead-letters-csharp`,
-    `basic/03-idempotent-consumer-csharp`, `basic/04-replay-csharp`,
-    `basic/05-transactional-outbox-csharp`.
-  - Go: `basic/01-publish-and-consume`, `basic/02-retries-and-dead-letters`,
-    `basic/04-replay`, `intermediate/01-request-reply`,
-    `intermediate/02-idempotent-consumer`, `intermediate/03-outbox`,
-    `advanced/02-metrics-and-health`.
-- **The examples repositories are not tagged.** The pins are commits, which
-  works; a tag per library release in each examples repository would make
-  `pins.env` read more plainly.
 
 ## Here
 
-- **Bump on every library release.** `check-pins.sh` goes red when a library
-  releases; set the version and the examples commit in `pins.env` and the image
-  tags in README, docs and `compose.yaml`, then tag a release. Not automated yet
-  — a scheduled job opening that pull request would be the next step.
+- **A release after every bump is cut by hand.** `bump-pins` lands new pins on
+  main by itself, but the images for them are published only by the next
+  tutorials release ([RELEASING.md](RELEASING.md)), so for a while the README
+  names an image tag that is not pushed yet. Releasing automatically is a
+  workflow away; it is held back only because a version is tagged when
+  somebody decides to.
 - **The integrations.** The Spring Boot starter, .NET hosting, FastAPI and Rails
   integrations each have their own docs and examples; a step 8, "in your
   framework", would link them. Go has no integration.

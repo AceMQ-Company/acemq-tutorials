@@ -9,6 +9,26 @@ else. Images are tagged with the library version they carry.
 
 ## [Unreleased]
 
+### Changed
+
+- The examples are pinned by tag, not by commit: `examples-v<library version>`
+  in each examples repository, which names the release it was verified on and
+  is never moved. `etc/check-pins.sh` checks that the tag is for the pinned
+  release, exists and pins it; the build resolves it to its commit and records
+  that in the image.
+- The .NET and Go images carry the examples' newer READMEs, so the twelve
+  examples on the path that had none are described on the step pages in their
+  own README's words; every image carries its examples repository's *Versions*
+  section saying how it is tagged.
+
+### Added
+
+- `bump-pins`, daily: moves the pins to the newest library releases whose
+  examples are tagged, runs check-pins and every step of the moved languages,
+  and lands the change on main. A release without an examples tag is reported
+  and left alone.
+- `RELEASING.md`.
+
 ## [0.1.0] - 2026-10-13
 
 ### Added

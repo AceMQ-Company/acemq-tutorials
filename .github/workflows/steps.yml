@@ -1,0 +1,50 @@
+# Build images and run every step against the broker inside each.
+#
+# Called by ci.yml for all five languages, and by bump-pins.yml for the ones
+# whose pins it moved, at the commit it is about to land -- so a bump is held to
+# exactly the job every push is.
+name: steps
+
+on:
+  workflow_call:
+    inputs:
+      langs:
+        description: JSON array of languages
+        type: string
+        default: '["java","python","ruby","dotnet","go"]'
+      ref:
+        description: what to check out; empty is the commit that triggered the caller
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  steps:
+    name: every step, ${{ matrix.lang }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        lang: ${{ fromJSON(inputs.langs) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+      - uses: docker/setup-buildx-action@v3
+      - name: Build the image
+        run: ./etc/build-image.sh ${{ matrix.lang }} --load --cache-from type=gha,scope=${{ matrix.lang }}-amd64 --cache-to type=gha,mode=max,scope=${{ matrix.lang }}-amd64
+      - name: Run every step against the broker inside it
+        run: |
+          . ./pins.env
+          v="$(echo ${{ matrix.lang }} | tr a-z A-Z)_VERSION"
+          docker run --rm "ghcr.io/acemq-company/acemq-tutorials-${{ matrix.lang }}:${!v}" all
+      - name: The commands a reader is told about
+        run: |
+          . ./pins.env
+          v="$(echo ${{ matrix.lang }} | tr a-z A-Z)_VERSION"
+          image="ghcr.io/acemq-company/acemq-tutorials-${{ matrix.lang }}:${!v}"
+          docker run --rm "$image" | grep -q 'Your first message'
+          docker run --rm "$image" version | grep -q "library *${!v}"
+          if docker run --rm "$image" step 99; then echo "::error::step 99 should fail"; exit 1; fi

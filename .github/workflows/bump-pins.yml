@@ -1,0 +1,154 @@
+# Move the pins to the newest library releases whose examples are tagged.
+#
+# Every day: etc/bump-pins.py works out, per language, the newest acemq-<lang>-amqp
+# release and the newest examples-v<that>[-r<n>] tag of its examples repository.
+# Where that differs from pins.env it rewrites the pins and the image tags,
+# commits that to a branch, runs etc/check-pins.sh and then every step of every
+# moved language (steps.yml, the job CI runs on every push), and only then
+# fast-forwards main to that commit. A release with no examples tag yet is named
+# in the summary and left alone: the examples repository has not been verified
+# on it.
+#
+# Why not a pull request: the enterprise does not let GitHub Actions open one,
+# and a token with more reach than this repository's own is not worth it for a
+# change this workflow has already verified end to end. A bump that fails is not
+# landed; its branch stays, linked from the summary, and the run is red.
+#
+# Pushes made with GITHUB_TOKEN start no workflows, so after landing this
+# dispatches ci.yml and docs.yml on main itself. It does not cut a release: see
+# RELEASING.md.
+#
+# Dry run: `rewind: java` pretends Java's pin is one release behind, on a
+# throwaway branch, and bumps that branch instead of main -- the whole path,
+# landing included, with main untouched. Both branches are deleted afterwards.
+name: bump-pins
+
+on:
+  schedule:
+    - cron: '29 5 * * *'
+  workflow_dispatch:
+    inputs:
+      rewind:
+        description: 'Dry run: pretend this language is one release behind, and bump a throwaway branch instead of main'
+        type: choice
+        options: ['', java, python, ruby, dotnet, go]
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bump-pins
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      langs: ${{ steps.bump.outputs.langs }}
+      title: ${{ steps.bump.outputs.title }}
+      base: ${{ steps.base.outputs.base }}
+      branch: ${{ steps.commit.outputs.branch }}
+      sha: ${{ steps.commit.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898276+github-actions[bot]@users.noreply.github.com'
+      - name: The base to bump
+        id: base
+        env:
+          REWIND: ${{ inputs.rewind }}
+        run: |
+          if [ -z "$REWIND" ]; then echo base=main >> "$GITHUB_OUTPUT"; exit 0; fi
+          prev="$(git ls-remote --tags "https://github.com/AceMQ-Company/acemq-$REWIND-amqp" \
+            | sed 's#.*refs/tags/##' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sed 's/^v//' | sort -V | tail -2 | head -1)"
+          base="bump-pins/dry-run-$GITHUB_RUN_ID"
+          git switch -c "$base"
+          ./etc/bump-pins.py --set "$REWIND=$prev:examples-v$prev"
+          git commit -qam "Dry run: pretend $REWIND is pinned at $prev"
+          git push -q origin "$base"
+          echo "base=$base" >> "$GITHUB_OUTPUT"
+          echo "Dry run: \`$base\` pins $REWIND at $prev. Bumping that branch, not main." >> "$GITHUB_STEP_SUMMARY"
+      - name: Work out the pins
+        id: bump
+        run: ./etc/bump-pins.py
+      - name: The pins are the newest releases
+        if: steps.bump.outputs.langs != '[]'
+        run: ./etc/check-pins.sh
+      - name: Commit to a branch
+        id: commit
+        if: steps.bump.outputs.langs != '[]'
+        env:
+          TITLE: ${{ steps.bump.outputs.title }}
+        run: |
+          branch="bump-pins/run-$GITHUB_RUN_ID"
+          git switch -c "$branch"
+          git commit -qa -m "$TITLE" -m "Moved by the bump-pins workflow after check-pins passed: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          git push -q origin "$branch"
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - name: Nothing moved
+        if: steps.bump.outputs.langs == '[]'
+        env:
+          BASE: ${{ steps.base.outputs.base }}
+        run: |
+          echo "Every pin is current, or waiting on an examples tag. Nothing to do." >> "$GITHUB_STEP_SUMMARY"
+          [ "$BASE" = main ] || git push -q origin --delete "$BASE"
+
+  steps:
+    needs: plan
+    if: needs.plan.outputs.langs != '[]'
+    uses: ./.github/workflows/steps.yml
+    with:
+      langs: ${{ needs.plan.outputs.langs }}
+      ref: ${{ needs.plan.outputs.sha }}
+
+  land:
+    needs: [plan, steps]
+    if: always() && needs.plan.result == 'success' && needs.plan.outputs.langs != '[]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Land it, or say why not
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BASE: ${{ needs.plan.outputs.base }}
+          BRANCH: ${{ needs.plan.outputs.branch }}
+          SHA: ${{ needs.plan.outputs.sha }}
+          TITLE: ${{ needs.plan.outputs.title }}
+          STEPS: ${{ needs.steps.result }}
+        run: |
+          commit="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/commit/$SHA"
+          if [ "$STEPS" != success ]; then
+            {
+              echo "**Not landed.** $TITLE: the steps ended '$STEPS'."
+              echo
+              echo "The commit is [\`${SHA:0:12}\`]($commit) on \`$BRANCH\`; compare it with \`$BASE\`: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/compare/$BASE...$BRANCH"
+            } >> "$GITHUB_STEP_SUMMARY"
+            [ "$BASE" = main ] || git push -q origin --delete "$BRANCH" "$BASE"
+            exit 1
+          fi
+          # A fast-forward or nothing: if the base moved since the plan, the push
+          # is refused and tomorrow's run starts again from the new base.
+          git fetch -q origin "$SHA"
+          git push origin "$SHA:refs/heads/$BASE"
+          git push -q origin --delete "$BRANCH"
+          if [ "$BASE" = main ]; then
+            gh workflow run ci.yml --ref main
+            gh workflow run docs.yml --ref main
+            {
+              echo "**Landed** $TITLE on main as [\`${SHA:0:12}\`]($commit), after check-pins and every step passed. CI and the site are dispatched on main."
+              echo
+              echo "The images for the new versions are published by the next tutorials release: see RELEASING.md."
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            test "$(git ls-remote origin "refs/heads/$BASE" | cut -f1)" = "$SHA"
+            git push -q origin --delete "$BASE"
+            echo "**Dry run landed** $TITLE as [\`${SHA:0:12}\`]($commit) on \`$BASE\`, after check-pins and every step passed; on a real run that is main. Both branches are deleted; main is untouched." >> "$GITHUB_STEP_SUMMARY"
+          fi
