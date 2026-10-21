@@ -9,7 +9,7 @@ one path of seven steps, each runnable with one command and nothing installed bu
 Docker:
 
 ```bash
-docker run --rm -p 15672:15672 ghcr.io/acemq-company/acemq-tutorials-python:0.7.12 step 1
+docker run --rm -p 15672:15672 ghcr.io/acemq-company/acemq-tutorials-python:0.7.14 step 1
 ```
 
 **The site is at <https://acemq.org/acemq-tutorials/>.**
@@ -28,11 +28,11 @@ docker run --rm -p 15672:15672 ghcr.io/acemq-company/acemq-tutorials-python:0.7.
 
 | Language | Image |
 |---|---|
-| Java | `ghcr.io/acemq-company/acemq-tutorials-java:0.7.15` |
-| Python | `ghcr.io/acemq-company/acemq-tutorials-python:0.7.12` |
-| Ruby | `ghcr.io/acemq-company/acemq-tutorials-ruby:0.7.14` |
-| .NET | `ghcr.io/acemq-company/acemq-tutorials-dotnet:0.7.13` |
-| Go | `ghcr.io/acemq-company/acemq-tutorials-go:0.9.9` |
+| Java | `ghcr.io/acemq-company/acemq-tutorials-java:0.7.17` |
+| Python | `ghcr.io/acemq-company/acemq-tutorials-python:0.7.14` |
+| Ruby | `ghcr.io/acemq-company/acemq-tutorials-ruby:0.7.16` |
+| .NET | `ghcr.io/acemq-company/acemq-tutorials-dotnet:0.7.15` |
+| Go | `ghcr.io/acemq-company/acemq-tutorials-go:0.9.11` |
 
 Each is tagged with the version of the library it carries, plus `latest` and an
 immutable `<library version>-t<tutorials version>`. Each contains the toolchain,
@@ -65,7 +65,7 @@ own documentation, linked from every step. Nothing is copied.
 
 ```bash
 ./etc/build-image.sh go                      # build one image from pins.env
-docker run --rm ghcr.io/acemq-company/acemq-tutorials-go:0.9.9 all
+docker run --rm ghcr.io/acemq-company/acemq-tutorials-go:0.9.11 all
 ./etc/check-pins.sh                          # the pins are the newest releases
 ./etc/build-site.sh                          # render the site into site/
 ```

@@ -38,16 +38,16 @@ services:
 
   java:
     <<: *tutorial
-    image: ghcr.io/acemq-company/acemq-tutorials-java:0.7.15
+    image: ghcr.io/acemq-company/acemq-tutorials-java:0.7.17
   python:
     <<: *tutorial
-    image: ghcr.io/acemq-company/acemq-tutorials-python:0.7.12
+    image: ghcr.io/acemq-company/acemq-tutorials-python:0.7.14
   ruby:
     <<: *tutorial
-    image: ghcr.io/acemq-company/acemq-tutorials-ruby:0.7.14
+    image: ghcr.io/acemq-company/acemq-tutorials-ruby:0.7.16
   dotnet:
     <<: *tutorial
-    image: ghcr.io/acemq-company/acemq-tutorials-dotnet:0.7.13
+    image: ghcr.io/acemq-company/acemq-tutorials-dotnet:0.7.15
   go:
     <<: *tutorial
-    image: ghcr.io/acemq-company/acemq-tutorials-go:0.9.9
+    image: ghcr.io/acemq-company/acemq-tutorials-go:0.9.11
