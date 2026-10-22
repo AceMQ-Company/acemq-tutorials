@@ -9,7 +9,7 @@ This is the one place to start. It is a path of seven steps; each step runs in
 all five languages, with one command and nothing installed but Docker:
 
 ```bash
-docker run --rm -p 15672:15672 ghcr.io/acemq-company/acemq-tutorials-python:0.7.14 step 1
+docker run --rm -p 15672:15672 ghcr.io/acemq-company/acemq-tutorials-python:0.7.15 step 1
 ```
 
 The image carries the toolchain, the library at a released version, the
@@ -30,10 +30,10 @@ real broker, and the prose lives in each library's documentation.
 ## Inside an image
 
 ```bash
-docker run --rm ghcr.io/acemq-company/acemq-tutorials-go:0.9.11                 # list the steps
-docker run --rm -p 15672:15672 ghcr.io/acemq-company/acemq-tutorials-go:0.9.11 step 3 --keep
-docker run --rm -it ghcr.io/acemq-company/acemq-tutorials-go:0.9.11 shell       # a shell, broker running
-docker run --rm -p 5672:5672 -p 15672:15672 ghcr.io/acemq-company/acemq-tutorials-go:0.9.11 broker
+docker run --rm ghcr.io/acemq-company/acemq-tutorials-go:0.9.12                 # list the steps
+docker run --rm -p 15672:15672 ghcr.io/acemq-company/acemq-tutorials-go:0.9.12 step 3 --keep
+docker run --rm -it ghcr.io/acemq-company/acemq-tutorials-go:0.9.12 shell       # a shell, broker running
+docker run --rm -p 5672:5672 -p 15672:15672 ghcr.io/acemq-company/acemq-tutorials-go:0.9.12 broker
 ```
 
 `shell` opens a shell in the examples checkout with the toolchain on the `PATH`

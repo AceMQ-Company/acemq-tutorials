@@ -16,6 +16,11 @@ else. Images are tagged with the library version they carry.
 - Track Ruby 0.7.16, examples `examples-v0.7.16` (was 0.7.14, `examples-v0.7.14`).
 - Track .NET 0.7.15, examples `examples-v0.7.15` (was 0.7.13, `examples-v0.7.13`).
 - Track Go 0.9.11, examples `examples-v0.9.11` (was 0.9.9, `examples-v0.9.9`).
+- Track Java 0.7.18, examples `examples-v0.7.18` (was 0.7.17, `examples-v0.7.17`).
+- Track Python 0.7.15, examples `examples-v0.7.15` (was 0.7.14, `examples-v0.7.14`).
+- Track Ruby 0.7.17, examples `examples-v0.7.17` (was 0.7.16, `examples-v0.7.16`).
+- Track .NET 0.7.16, examples `examples-v0.7.16` (was 0.7.15, `examples-v0.7.15`).
+- Track Go 0.9.12, examples `examples-v0.9.12` (was 0.9.11, `examples-v0.9.11`).
 
 ## [0.1.1] - 2026-10-13
 

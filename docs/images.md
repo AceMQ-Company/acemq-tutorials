@@ -48,7 +48,7 @@ docker compose run --rm go step 3
 ```bash
 git clone https://github.com/AceMQ-Company/acemq-tutorials && cd acemq-tutorials
 ./etc/build-image.sh python
-docker run --rm ghcr.io/acemq-company/acemq-tutorials-python:0.7.14 all
+docker run --rm ghcr.io/acemq-company/acemq-tutorials-python:0.7.15 all
 ```
 
 `pins.env` holds every version an image is built from.
