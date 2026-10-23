@@ -2,16 +2,17 @@
 
 The design of this repository, written before it was built and kept up to date
 since. The short version: **this repository owns the order, not the content.**
-It decides which seven things a newcomer learns and in what order; the examples
+It decides which eight things a newcomer learns and in what order; the examples
 repositories own the code, the library sites own the prose, and both are linked
 at the exact version an image was built from.
 
 ## What a newcomer gets
 
-- A path of seven steps, each in all five languages: Java, Python, Ruby, .NET
-  and Go.
+- A path of eight steps, each in all five languages: Java, Python, Ruby, .NET
+  and Go (step 8, the framework integrations, has nothing to run in Go, which
+  has no integration).
 - For every language, an image that runs any step with one command and nothing
-  installed but Docker — toolchain, library, tutorial code and a broker inside.
+  installed but Docker — library, tutorial code built, a runtime and a broker inside.
 - A site listing the path, each step showing the five languages side by side
   and linking to the example at its pinned examples tag and to the library's
   own tutorial and guide pages.
@@ -27,6 +28,7 @@ at the exact version an image was built from.
 | 5 | Streams | a log rather than a queue |
 | 6 | Outbox, saga and scheduler | the patterns built from everything above |
 | 7 | Seeing what happens | metrics, health and traces over all of it |
+| 8 | In your framework | the same messages through the Spring Boot starter, .NET hosting, FastAPI and Rails |
 
 The brief suggested "reliable publish / confirms" as step 2. It is folded into
 step 1 instead: every AceMQ library confirms by default, so the first message
@@ -42,8 +44,33 @@ language to directories in the examples repository. A step runs one or more
 examples in order; every one exits non-zero when what it demonstrates did not
 happen, so a step that passes is a step that taught what it says.
 
-.NET runs the C# example of each pair. The Visual Basic twin is the same
-program, and is linked from the examples repository's README.
+.NET runs the C# example of each pair by default. The .NET image also carries
+the VB.NET twin of every example the path uses, built, and `TUTORIAL_VARIANT=vbnet` runs those instead —
+`docker run --rm -e TUTORIAL_VARIANT=vbnet <image> step 3`. The path names the
+C# directory; the twin is the `-vbnet` directory beside it, so nothing in
+`path/` says anything twice.
+
+### Step 8: the integrations
+
+Spring Boot, the .NET Generic Host, FastAPI and Rails each have an AceMQ
+integration of its own (`acemq-java-amqp-spring-boot-starter`,
+`acemq-dotnet-amqp-hosting`, `acemq-python-amqp-fastapi`,
+`acemq-ruby-amqp-rails`). Step 8 is the step 1 program written each framework's
+way: the framework opens the connection and declares the topology, a handler
+the framework resolves consumes, the application publishes, and stopping the
+application drains. Each example then checks that three orders went out and
+three came back, and exits non-zero otherwise, like every other step.
+
+Those repositories have no examples repository, so step 8's examples are the
+one exception to "nothing is copied": they live in
+[`integrations/`](https://github.com/AceMQ-Company/acemq-tutorials/tree/main/integrations)
+here and are built into the image at `/tutorials/examples/integrations/`, so
+`path/examples.tsv` names them like any other directory. Each integration's
+release is pinned in `pins.env` as `<LANG>_INTEGRATION_VERSION`, beside the
+library release it is built with; the image build holds both to their pins
+(the library by naming it beside the integration, which normally carries it
+already). Go has no integration and is not given one here: its row in
+`path/examples.tsv` is `-` with a note, which `tutorial step 8` prints.
 
 ## Aggregation: pinned tags, fetched at build time
 
@@ -91,15 +118,22 @@ highest revision wins. Each examples repository's README says so under
 `ghcr.io/acemq-company/acemq-tutorials-<lang>`, built from one Dockerfile with
 a target per language (`images/Dockerfile`). Each is:
 
-1. **`rabbitmq:<version>-management` as the base.** The broker is the hard part
-   to install well — Erlang, OpenSSL and the server are built together upstream
-   — and the toolchains are not: Python, Ruby and their build tools are Ubuntu
-   packages, and the JDK, Maven, the .NET SDK and Go are self-contained
-   directories copied out of their own official images.
-2. **The examples at the commit the pinned tag names**, built once at image build time —
-   Maven compiles and copies each module's runtime classpath, the .NET projects
-   are built in Release, Go builds a binary per example, Python gets a venv,
-   Ruby gets its bundle. A step then starts a process rather than a build.
+1. **`rabbitmq:<version>-management-alpine` as the base.** The broker is the
+   hard part to install well — Erlang, OpenSSL and the server are built
+   together upstream — and the runtimes are not: Python and Ruby are Alpine
+   packages, and the Java runtime and the .NET runtime are self-contained
+   directories copied out of their official Alpine images.
+2. **The examples at the commit the pinned tag names**, built once at image
+   build time, in a build stage of their own — Maven compiles and copies each
+   module's runtime classpath, the .NET projects are published, Go builds a
+   static binary per example, Python gets a venv, Ruby gets its bundle. A step
+   then starts a process rather than a build. The image gets the build's output
+   and a runtime, and no toolchain: no JDK, Maven, .NET SDK, Go, compiler or
+   package cache. That is what took the images from 0.55–1.4 GB to 0.36–0.53 GB
+   ([the images](images.md#size) has the numbers). The cost is that `shell` can
+   no longer rebuild a Java, .NET or Go example after an edit; Python and Ruby
+   run from source, so editing them still works. Changing a compiled example
+   means its examples repository, or building the image yourself.
 3. **A check that the library resolved is the pinned release**, in every
    language. The build fails otherwise. This matters most for Ruby, whose
    examples repository deliberately commits no lock and asks for `~> 0.7`.
@@ -153,7 +187,8 @@ goes to any library feed.
   language: the pinned version is the newest `vX.Y.Z` tag of the library; the
   pinned examples tag is one for that version, exists, and names a commit whose
   own manifest pins it; and every image tag written into the README, the docs
-  or `compose.yaml` is the pinned one. It runs on every push and on a weekly
+  or `compose.yaml` is the pinned one. Each integration pin is the newest
+  `vX.Y.Z` tag of its repository. It runs on every push and on a weekly
   schedule, because a library release moves underneath this repository without
   a commit landing here.
 - **`bump-pins.yml` — and they are moved for you.** Daily, it finds each
@@ -161,7 +196,8 @@ goes to any library feed.
   not the pins it rewrites them, runs `check-pins.sh` and every step of the
   moved languages — `steps.yml`, the job CI runs — and fast-forwards main only
   if all of that passed. A release without an examples tag is named in the run
-  summary and left alone.
+  summary and left alone. Integration releases are moved the same way; they
+  need no examples tag, because their example is here.
 - **Every step runs in CI.** Each image is built and `tutorial all` runs every
   step against its bundled broker. A release builds both architectures on
   native runners and runs the same smoke test on each before anything is pushed.
@@ -172,9 +208,10 @@ goes to any library feed.
 ## Layout
 
 ```
-pins.env               every version: library releases, examples tags, broker
+pins.env               every version: library and integration releases, examples tags, broker
 path/steps.tsv         the steps
 path/examples.tsv      step × language → example directories
+integrations/          step 8's examples, one per framework integration
 images/Dockerfile      one target per language
 images/tutorial        the entrypoint
 compose.yaml           one broker, five images pointed at it

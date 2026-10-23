@@ -9,7 +9,36 @@ else. Images are tagged with the library version they carry.
 
 ## [Unreleased]
 
+### Added
+
+- Step 8, **In your framework**: the step 1 program through each framework
+  integration — the Spring Boot starter (Java), AceMq.Amqp.Hosting (.NET, in C#
+  and VB.NET), acemq-amqp-fastapi (Python) and acemq-amqp-rails (Ruby). Each
+  publishes three orders, consumes them through the framework's own handler and
+  drains on shutdown, and fails unless all three came back. The examples live
+  in `integrations/`, because the integrations have no examples repository. Go
+  has no integration; its step 8 says so and passes.
+- `pins.env` pins each integration release as `<LANG>_INTEGRATION_VERSION`
+  (starter 0.3.6, hosting 0.2.8, FastAPI 0.1.10, Rails 0.2.9). The image build
+  holds it and the library under it to their pins, `tutorial version` prints
+  it, `check-pins.sh` checks it is the newest release, and `bump-pins` moves it.
+- VB.NET in the .NET image: the VB.NET twin of every example the path uses is
+  built in, and `-e TUTORIAL_VARIANT=vbnet` runs those instead of the C# ones.
+  CI and the release run every step in both.
+
 ### Changed
+
+- **Smaller images**, on the same pins: Java 1.19 → 0.53 GB, Python 0.55 →
+  0.41 GB, Ruby 0.99 → 0.42 GB, .NET 1.42 → 0.47 GB, Go 1.08 → 0.36 GB
+  (linux/arm64, with step 8 and the VB.NET twins included after). The base is
+  `rabbitmq:4.3.6-management-alpine`, and each language is built in a stage of
+  its own: the image gets the built examples and a runtime (the Temurin 21 JRE,
+  Python 3.12, Ruby 3.4, the .NET 8 runtime, or nothing for Go's static
+  binaries), and no JDK, Maven, .NET SDK, Go or compiler. Java keeps one copy
+  of each jar its examples share instead of one per example.
+- `shell` can no longer rebuild a Java, .NET or Go example after an edit; the
+  image has no compiler. Python and Ruby examples still run from source.
+- Ruby in the image is 3.4 (was 3.2), from Alpine.
 
 - Track Java 0.7.17, examples `examples-v0.7.17` (was 0.7.15, `examples-v0.7.15`).
 - Track Python 0.7.14, examples `examples-v0.7.14` (was 0.7.12, `examples-v0.7.12`).

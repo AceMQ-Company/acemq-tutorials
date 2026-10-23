@@ -1,0 +1,26 @@
+<Project>
+  <!--
+    Shared by the two .NET hosting examples. Both versions come from pins.env
+    through the image build (-p:AceMqVersion=... -p:HostingVersion=...); the
+    values here are for building outside it.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <RollForward>LatestMajor</RollForward>
+    <OutputType>Exe</OutputType>
+    <AceMqVersion>0.7.18</AceMqVersion>
+    <HostingVersion>0.2.8</HostingVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AceMq.Amqp.Hosting" Version="$(HostingVersion)" />
+    <!-- The library release the image is pinned to, named so that it is the one
+         resolved even before a hosting release has caught up with it. -->
+    <PackageReference Include="AceMq.Amqp" Version="$(AceMqVersion)" />
+    <PackageReference Include="AceMq.Amqp.RabbitMq" Version="$(AceMqVersion)" />
+    <None Include="../hosting-appsettings.json" Link="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

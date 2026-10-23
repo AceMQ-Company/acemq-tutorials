@@ -20,15 +20,10 @@ These are not this repository's to fix; each is the examples repository's.
   names an image tag that is not pushed yet. Releasing automatically is a
   workflow away; it is held back only because a version is tagged when
   somebody decides to.
-- **The integrations.** The Spring Boot starter, .NET hosting, FastAPI and Rails
-  integrations each have their own docs and examples; a step 8, "in your
-  framework", would link them. Go has no integration.
-- **Visual Basic.** .NET runs the C# example of each pair. A `TUTORIAL_VARIANT=vbnet`
-  switch could run the VB twin instead, from the same image.
 - **The broker version is not checked.** `RABBITMQ_IMAGE` in `pins.env` is moved
   by hand. The libraries support 3.13 and 4.x; the images carry 4.3.6.
-- **Image size.** Each image is the broker plus a full toolchain (0.55–1.4
-  GB). A slimmer runtime-only variant is possible for Java, .NET and Go, at the
-  cost of `shell` no longer being able to rebuild an example.
+- **The Java runtime is a whole JRE** (0.16 GB of the 0.53 GB image). A
+  `jlink`ed runtime of just the modules the examples use would be smaller, at
+  the cost of a module list to keep right as the examples change.
 - **A link from the landing page** at acemq.org to this site — the landing page
   is maintained separately.

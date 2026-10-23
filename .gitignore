@@ -1,3 +1,10 @@
 # Rendered by etc/build-site.sh; published by the docs workflow, never committed.
 /site/
 .DS_Store
+# Build output of the step 8 examples, when they are run outside an image.
+/integrations/spring-boot/target/
+/integrations/*/bin/
+/integrations/*/obj/
+/integrations/rails/Gemfile.lock
+/integrations/rails/.bundle/
+__pycache__/

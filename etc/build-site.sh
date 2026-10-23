@@ -44,7 +44,18 @@ examples = list(rows("examples.tsv"))
 def version(lang): return pins[f"{lang.upper()}_VERSION"]
 def tag(lang): return pins[f"{lang.upper()}_EXAMPLES"]
 def image(lang): return f"ghcr.io/acemq-company/acemq-tutorials-{lang}:{version(lang)}"
-def tree(lang, d): return f"https://github.com/AceMQ-Company/acemq-{lang}-amqp-examples/tree/{tag(lang)}/{d}"
+def tree(lang, d):
+    # Step 8's examples are this repository's own.
+    if d.startswith("integrations/"):
+        return f"https://github.com/AceMQ-Company/acemq-tutorials/tree/main/{d}"
+    return f"https://github.com/AceMQ-Company/acemq-{lang}-amqp-examples/tree/{tag(lang)}/{d}"
+def twin(lang, d):  # the VB.NET twin of a C# example, which the .NET image also runs
+    return d[: -len("-csharp")] + "-vbnet" if lang == "dotnet" and d.endswith("-csharp") else None
+# The framework integration each language's step 8 runs, by its repository.
+INTEGRATIONS = {"java": ("acemq-java-amqp-spring-boot-starter", "Spring Boot starter"),
+                "python": ("acemq-python-amqp-fastapi", "FastAPI"),
+                "ruby": ("acemq-ruby-amqp-rails", "Rails"),
+                "dotnet": ("acemq-dotnet-amqp-hosting", ".NET hosting")}
 def docs(lang, page): return f"https://acemq.org/acemq-{lang}-amqp/{page}.html"
 
 def fetch(lang, path):
@@ -60,7 +71,10 @@ def lead(lang, d):
     """What the example shows, in its own repository's words, at the pinned tag:
     the first paragraph of its README, or -- for an example without one -- its row
     in the table of examples in the repository's README."""
-    text = fetch(lang, f"{d}/README.md")
+    if d.startswith("integrations/"):
+        text = open(f"{d}/README.md").read()
+    else:
+        text = fetch(lang, f"{d}/README.md")
     if text is not None:
         for p in (p.strip() for p in re.split(r"\n\s*\n", text)):
             if p and not p.startswith(("#", "[!", "```", "|", ">")):
@@ -79,28 +93,39 @@ for n, title, summary, pages in steps:
     prev = f"[← step {int(n)-1}](step-{int(n)-1}.md)" if int(n) > 1 else "[← the path](index.md)"
     nxt = f"[step {int(n)+1} →](step-{int(n)+1}.md)" if int(n) < len(steps) else "[the path →](index.md)"
     out += [f"{prev} · {nxt}", "", "## Run it", "",
-            "One command, whichever language you came for. The image carries the toolchain, "
-            "the library and RabbitMQ; the management UI is on <http://localhost:15672> "
+            "One command, whichever language you came for. The image carries the library, "
+            "the example built, its runtime and RabbitMQ; the management UI is on <http://localhost:15672> "
             "(guest/guest) while it runs, and `--keep` holds it open afterwards.", "", "```bash"]
     for lang, name in langs:
         out.append(f"docker run --rm -p 15672:15672 {image(lang)} step {n}")
+    out.append(f"docker run --rm -p 15672:15672 -e TUTORIAL_VARIANT=vbnet {image('dotnet')} step {n}   # .NET in VB.NET")
     out += ["```", "", "## Side by side", "",
             "| | " + " | ".join(name for _, name in langs) + " |",
             "|---|" + "---|" * len(langs)]
-    cells = []
-    for lang, _ in langs:
-        ds = [e[2] for e in examples if e[0] == n and e[1] == lang]
-        cells.append("<br>".join(f"[`{d.split('/')[-1]}`]({tree(lang, d)})" for d in ds) or "—")
-    out.append("| Example | " + " | ".join(cells) + " |")
-    for page in pages.split(","):
+    def runs(lang): return [e[2] for e in examples if e[0] == n and e[1] == lang and e[2] != "-"]
+    def cell(lang, d):
+        link = f"[`{d.split('/')[-1]}`]({tree(lang, d)})"
+        return link + (f" ([VB.NET]({tree(lang, twin(lang, d))}))" if twin(lang, d) else "")
+    out.append("| Example | " + " | ".join("<br>".join(cell(lang, d) for d in runs(lang)) or "—" for lang, _ in langs) + " |")
+    if any(e[0] == n and e[2].startswith("integrations/") for e in examples):
+        out.append("| Integration | " + " | ".join(
+            f"[{INTEGRATIONS[lang][1]} {pins[lang.upper() + '_INTEGRATION_VERSION']}](https://acemq.org/{INTEGRATIONS[lang][0]}/)"
+            if lang in INTEGRATIONS else "—" for lang, _ in langs) + " |")
+    for page in ([] if pages == "-" else pages.split(",")):
         label = page.replace("tutorial-", "tutorial: ").replace("-", " ")
         out.append(f"| {label.capitalize()} | " + " | ".join(f"[{name}]({docs(lang, page)})" for lang, name in langs) + " |")
     out.append("")
     for lang, name in langs:
         out += [f"## {name}", "", f"`acemq-{lang}-amqp` {version(lang)}, "
                 f"[acemq-{lang}-amqp-examples {tag(lang)}](https://github.com/AceMQ-Company/acemq-{lang}-amqp-examples/tree/{tag(lang)}).", ""]
-        for d in [e[2] for e in examples if e[0] == n and e[1] == lang]:
+        for d in runs(lang):
             out += [f"### [`{d}`]({tree(lang, d)})", "", lead(lang, d), ""]
+            if twin(lang, d):
+                out += [f"The VB.NET twin, [`{twin(lang, d)}`]({tree(lang, twin(lang, d))}), is the same program; "
+                        f"`-e TUTORIAL_VARIANT=vbnet` runs it instead.", ""]
+        for e in examples:
+            if e[0] == n and e[1] == lang and e[2] == "-":
+                out += [e[3], ""]
     open(f"{gen}/step-{n}.md", "w").write("\n".join(out))
 
 table = ["| Step | | What you learn |", "|---|---|---|"]
@@ -108,10 +133,15 @@ for n, title, summary, _ in steps:
     table.append(f"| {n} | [{title}](step-{n}.md) | {summary} |")
 open(f"{gen}/path.md", "w").write("\n".join(table) + "\n")
 
-images = ["| Language | Image | Library | Examples |", "|---|---|---|---|"]
+images = ["| Language | Image | Library | Examples | Step 8 |", "|---|---|---|---|---|"]
 for lang, name in langs:
+    integration = "—"
+    if lang in INTEGRATIONS:
+        repo, label = INTEGRATIONS[lang]
+        v = pins[f"{lang.upper()}_INTEGRATION_VERSION"]
+        integration = f"[{label} {v}](https://github.com/AceMQ-Company/{repo}/releases/tag/v{v})"
     images.append(f"| {name} | `{image(lang)}` | [acemq-{lang}-amqp {version(lang)}](https://github.com/AceMQ-Company/acemq-{lang}-amqp/releases/tag/v{version(lang)}) "
-                  f"| [`{tag(lang)}`](https://github.com/AceMQ-Company/acemq-{lang}-amqp-examples/tree/{tag(lang)}) |")
+                  f"| [`{tag(lang)}`](https://github.com/AceMQ-Company/acemq-{lang}-amqp-examples/tree/{tag(lang)}) | {integration} |")
 open(f"{gen}/images.md", "w").write("\n".join(images) + "\n")
 print(f"generated {len(steps)} step pages")
 PY

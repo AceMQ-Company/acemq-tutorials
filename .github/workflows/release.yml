@@ -58,6 +58,9 @@ jobs:
           . ./pins.env
           v="$(echo ${{ matrix.lang }} | tr a-z A-Z)_VERSION"
           docker run --rm "ghcr.io/acemq-company/acemq-tutorials-${{ matrix.lang }}:${!v}" all
+          if [ "${{ matrix.lang }}" = dotnet ]; then
+            docker run --rm -e TUTORIAL_VARIANT=vbnet "ghcr.io/acemq-company/acemq-tutorials-dotnet:${!v}" all
+          fi
       - name: Push by digest
         # The same build again, from the cache, pushed untagged: the tags go on
         # the manifest list, once both architectures have passed.

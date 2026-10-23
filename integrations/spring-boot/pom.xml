@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Step 8 for Java: the Spring Boot starter.
+
+     The versions come from pins.env through the image build:
+     -Dstarter.version=<STARTER_VERSION> -Dacemq.version=<JAVA_VERSION>. -->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>org.acemq.tutorials</groupId>
+  <artifactId>spring-boot</artifactId>
+  <version>1</version>
+
+  <properties>
+    <maven.compiler.release>21</maven.compiler.release>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <spring-boot.version>3.5.7</spring-boot.version>
+    <starter.version>0.3.6</starter.version>
+    <acemq.version>0.7.20</acemq.version>
+  </properties>
+
+  <!-- AceMQ is not on Maven Central before 1.0. -->
+  <repositories>
+    <repository>
+      <id>acemq</id>
+      <url>https://acemq-company.github.io/maven/</url>
+    </repository>
+  </repositories>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-dependencies</artifactId>
+        <version>${spring-boot.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <!-- The library release this image is pinned to, which the starter release
+           normally carries already. Named here so that it is the pinned one even
+           in the window between a library release and the starter's. -->
+      <dependency>
+        <groupId>org.acemq</groupId>
+        <artifactId>acemq-amqp-api</artifactId>
+        <version>${acemq.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.acemq</groupId>
+        <artifactId>acemq-amqp-core</artifactId>
+        <version>${acemq.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.acemq</groupId>
+        <artifactId>acemq-transport-rabbitmq</artifactId>
+        <version>${acemq.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.acemq</groupId>
+        <artifactId>acemq-amqp-codec-json</artifactId>
+        <version>${acemq.version}</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.acemq</groupId>
+      <artifactId>acemq-spring-boot-starter</artifactId>
+      <version>${starter.version}</version>
+      <type>pom</type>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>3.5.1</version>
+        <configuration>
+          <mainClass>org.acemq.tutorials.OrdersApplication</mainClass>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>

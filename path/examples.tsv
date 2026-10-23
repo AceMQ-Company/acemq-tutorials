@@ -1,7 +1,11 @@
 # Which example in which examples repository each step runs, tab-separated:
-#   step  language  directory-in-the-examples-repository
+#   step  language  directory-in-the-examples-repository  [note]
 # A step may run several, in the order listed. Directories are at the commit
-# pins.env names for that language; nothing here is copied.
+# pins.env names for that language; nothing here is copied. The exception is
+# integrations/<name>: step 8's examples, which live in this repository's
+# integrations/ directory and are built into the image beside the others.
+# A directory of - means the language has nothing to run for that step, and
+# the note says why.
 1	java	basic/01-publish-and-confirm
 1	python	basic/01-publish-and-consume
 1	ruby	basic/01-publish-and-consume
@@ -54,3 +58,8 @@
 7	dotnet	intermediate/09-telemetry-csharp
 7	go	advanced/02-metrics-and-health
 7	go	advanced/06-tracing
+8	java	integrations/spring-boot
+8	python	integrations/fastapi
+8	ruby	integrations/rails
+8	dotnet	integrations/hosting-csharp
+8	go	-	Go has no framework integration: an AceMQ Go service is the library and the standard library, so step 1 is already what one looks like.

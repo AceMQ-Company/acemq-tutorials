@@ -1,0 +1,8 @@
+# Step 8 for Python. The tutorial image installs this on top of the examples'
+# requirements, with the versions from pins.env:
+#   acemq-amqp-fastapi==<FASTAPI_VERSION>, and acemq-amqp stays at <PYTHON_VERSION>.
+--extra-index-url https://acemq.org/pypi/simple/
+acemq-amqp-fastapi==0.1.10
+# TestClient, which drives the application below without a server. Starlette
+# 1.x asks for httpx2 in place of httpx.
+httpx2>=2.16

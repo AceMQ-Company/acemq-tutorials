@@ -1,0 +1,19 @@
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Warning",
+      "AceMq": "Information"
+    }
+  },
+  "acemq": {
+    "url": "amqp://guest:guest@localhost:5672",
+    "clientName": "tutorial-orders",
+    "topology": {
+      "exchanges": [{ "name": "tutorial.orders", "type": "topic" }],
+      "queues": [{ "name": "tutorial.orders.new" }],
+      "bindings": [
+        { "queue": "tutorial.orders.new", "exchange": "tutorial.orders", "routingKey": "order.created" }
+      ]
+    }
+  }
+}

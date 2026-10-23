@@ -15,6 +15,8 @@
 #      this notices in a second.
 #   3. Does every image tag written into the README, the docs and compose.yaml
 #      name the pinned version?
+#   4. Is <LANG>_INTEGRATION_VERSION, where there is one, the newest vX.Y.Z tag
+#      of that framework integration's repository? Step 8 runs it.
 #
 # It also says, without failing, when the examples repository's main has moved
 # past the tagged commit -- often a README fix, which reaches the tutorials once
@@ -84,6 +86,24 @@ for lang in java python ruby dotnet go; do
   head="$(git ls-remote "$examples" refs/heads/main | cut -f1)"
   if [ "$head" != "$commit" ]; then
     echo "::notice::$lang: acemq-$lang-amqp-examples main is at ${head:0:12}, past $tag (${commit:0:12})."
+  fi
+done
+
+# Step 8's framework integrations. Their examples are in this repository, so a
+# release tag is all a pin needs.
+for pair in java:acemq-java-amqp-spring-boot-starter python:acemq-python-amqp-fastapi \
+            ruby:acemq-ruby-amqp-rails dotnet:acemq-dotnet-amqp-hosting; do
+  lang="${pair%%:*}"; repo="${pair#*:}"
+  var="$(echo "$lang" | tr '[:lower:]' '[:upper:]')_INTEGRATION_VERSION"
+  version="${!var:-}"
+  [ -n "$version" ] || { echo "::error::pins.env has no $var ($repo)"; fail=1; continue; }
+  newest="$(git ls-remote --tags "https://github.com/AceMQ-Company/$repo" \
+    | sed 's#.*refs/tags/##' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sed 's/^v//' | sort -V | tail -1)"
+  if [ "$version" = "$newest" ]; then
+    echo "$lang integration $version: newest release of $repo"
+  else
+    echo "::error::$lang: pins.env has $var=$version but the newest release of $repo is ${newest:-none}. The bump-pins workflow moves this; run it, or set it by hand."
+    fail=1
   fi
 done
 exit "$fail"

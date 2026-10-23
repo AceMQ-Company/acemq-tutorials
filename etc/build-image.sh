@@ -17,6 +17,9 @@ upper="$(echo "$lang" | tr '[:lower:]' '[:upper:]')"
 version_var="${upper}_VERSION"; tag_var="${upper}_EXAMPLES"
 version="${!version_var:?no $version_var in pins.env}"
 tag="${!tag_var:?no $tag_var in pins.env}"
+# Step 8's framework integration; Go has none, and an empty value is fine there.
+integration_var="${upper}_INTEGRATION_VERSION"
+integration="${!integration_var:-}"
 
 # The pin is a tag; the build is given the commit it names, so the image records
 # exactly what it was built from (tutorial version prints it) and BuildKit
@@ -32,5 +35,6 @@ exec docker buildx build -f images/Dockerfile --target "$lang" \
   --build-arg RABBITMQ_IMAGE="$RABBITMQ_IMAGE" \
   --build-arg ACEMQ_VERSION="$version" \
   --build-arg EXAMPLES_COMMIT="$commit" \
+  --build-arg INTEGRATION_VERSION="$integration" \
   ${tag:+-t "$tag"} \
   "$@" .

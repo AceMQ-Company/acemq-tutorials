@@ -11,6 +11,10 @@ docs and compose.yaml, and adds a line to the CHANGELOG's [Unreleased]. A
 release with no examples tag yet is reported and left alone: it means the
 examples repository has not been verified on it, and nothing here can be.
 
+The same goes for <LANG>_INTEGRATION_VERSION, step 8's framework integration:
+the newest vX.Y.Z tag of its repository, with no examples tag to wait for,
+because step 8's examples are in this repository.
+
 It reads GitHub and writes files; it does not commit, build or check anything.
 etc/check-pins.sh is what says the result is right, and the bump-pins workflow
 runs that and every step before anything lands.
@@ -23,6 +27,8 @@ import json, os, pathlib, re, subprocess, sys
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 LANGS = {"java": "Java", "python": "Python", "ruby": "Ruby", "dotnet": ".NET", "go": "Go"}
 ORG = "https://github.com/AceMQ-Company"
+INTEGRATIONS = {"java": "acemq-java-amqp-spring-boot-starter", "python": "acemq-python-amqp-fastapi",
+                "ruby": "acemq-ruby-amqp-rails", "dotnet": "acemq-dotnet-amqp-hosting"}
 
 
 def tags(repo):
@@ -117,6 +123,28 @@ def main(argv):
         label = f"{name} {want_v}" if want_v != have_v else f"{name} {want_t}"
         moved.append((lang, label, f"{name} {want_v}, examples `{want_t}` (was {have_v}, `{have_t}`)."))
         report.append(f"| {name} | {have_v} | {want_v} | `{want_t}` | **moves** |")
+
+    # Step 8's integrations, moved on their own releases. Not with --set, which
+    # is about one language's library pin.
+    for lang, repo in ({} if forced else INTEGRATIONS).items():
+        key = f"{lang.upper()}_INTEGRATION_VERSION"
+        have = current.get(key)
+        releases = [t[1:] for t in tags(repo) if re.fullmatch(r"v\d+\.\d+\.\d+", t)]
+        if not releases or not have:
+            sys.exit(f"{lang}: no {key} in pins.env, or no release tags on {repo}")
+        want = max(releases, key=vkey)
+        if want == have:
+            report.append(f"| {repo} | {have} | {want} | — | current |")
+            continue
+        p = ROOT / "pins.env"
+        p.write_text(re.sub(rf"^{key}=.*$", f"{key}={want}", p.read_text(), flags=re.M))
+        line = f"{repo} {want} for step 8 (was {have})."
+        if lang in [m[0] for m in moved]:
+            moved = [(l, f"{label}, {repo} {want}", f"{text} And {line}") if l == lang else (l, label, text)
+                     for l, label, text in moved]
+        else:
+            moved.append((lang, f"{repo} {want}", line))
+        report.append(f"| {repo} | {have} | {want} | — | **moves** |")
 
     if moved and not forced:
         changelog([f"Track {line}" for _, _, line in moved])

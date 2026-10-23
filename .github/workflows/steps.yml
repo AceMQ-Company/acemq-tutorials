@@ -40,6 +40,11 @@ jobs:
           . ./pins.env
           v="$(echo ${{ matrix.lang }} | tr a-z A-Z)_VERSION"
           docker run --rm "ghcr.io/acemq-company/acemq-tutorials-${{ matrix.lang }}:${!v}" all
+      - name: Every step again in VB.NET
+        if: matrix.lang == 'dotnet'
+        run: |
+          . ./pins.env
+          docker run --rm -e TUTORIAL_VARIANT=vbnet "ghcr.io/acemq-company/acemq-tutorials-dotnet:$DOTNET_VERSION" all
       - name: The commands a reader is told about
         run: |
           . ./pins.env
@@ -47,4 +52,6 @@ jobs:
           image="ghcr.io/acemq-company/acemq-tutorials-${{ matrix.lang }}:${!v}"
           docker run --rm "$image" | grep -q 'Your first message'
           docker run --rm "$image" version | grep -q "library *${!v}"
+          i="$(echo ${{ matrix.lang }} | tr a-z A-Z)_INTEGRATION_VERSION"
+          if [ -n "${!i:-}" ]; then docker run --rm "$image" version | grep -q "integration .* ${!i}$"; fi
           if docker run --rm "$image" step 99; then echo "::error::step 99 should fail"; exit 1; fi

@@ -1,0 +1,19 @@
+# frozen_string_literal: true
+
+# Step 8 for Ruby. The tutorial image installs this with the versions from
+# pins.env (ACEMQ_VERSION=<RUBY_VERSION>, ACEMQ_RAILS_VERSION=<RAILS_VERSION>)
+# and keeps the lock it writes; outside the image, the newest releases.
+source "https://rubygems.org"
+
+source "https://acemq.org/gems" do
+  gem "acemq-amqp", ENV.fetch("ACEMQ_VERSION", ">= 0")
+  gem "acemq-amqp-rails", ENV.fetch("ACEMQ_RAILS_VERSION", ">= 0")
+end
+
+# The transport, which acemq-amqp asks for by name rather than depending on it.
+gem "bunny", ">= 2.23", "< 4"
+gem "logger", "~> 1.6"
+
+# The two pieces of Rails this uses: the application and a controller.
+gem "railties", ">= 7.1", "< 9"
+gem "actionpack", ">= 7.1", "< 9"

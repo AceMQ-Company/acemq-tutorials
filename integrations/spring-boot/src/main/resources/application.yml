@@ -1,0 +1,25 @@
+# Everything the starter needs to know, and nothing it would have guessed anyway
+# except the URL, which the tutorial image sets in AMQP_URL.
+spring:
+  application:
+    name: tutorial-orders   # the connection name on the broker's Connections page
+  main:
+    banner-mode: off
+
+acemq:
+  url: ${AMQP_URL:amqp://guest:guest@localhost:5672}
+  topology:
+    exchanges:
+      - name: tutorial.orders
+        type: topic
+    queues:
+      - name: tutorial.orders.new
+    bindings:
+      - queue: tutorial.orders.new
+        exchange: tutorial.orders
+        routing-key: order.created
+
+logging:
+  level:
+    root: warn
+    org.acemq: info

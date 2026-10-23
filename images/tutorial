@@ -11,6 +11,8 @@
 #
 # The same script serves all five images. TUTORIAL_LANG, set by each image's
 # Dockerfile, picks how an example is run; everything else is shared.
+# TUTORIAL_VARIANT=vbnet makes the .NET image run each example's VB.NET twin
+# (the <name>-vbnet directory beside <name>-csharp) instead of the C# one.
 set -euo pipefail
 
 ROOT=/tutorials
@@ -29,10 +31,23 @@ steps_list() {
   done
   echo
   echo "Run one:  docker run --rm -p 15672:15672 <this image> step 1"
+  [ "$LANG_ID" = dotnet ] && echo "VB.NET:   docker run --rm -p 15672:15672 -e TUTORIAL_VARIANT=vbnet <this image> step 1"
   echo "Read on:  https://acemq.org/acemq-tutorials/"
 }
 
-examples_of() { rows examples.tsv | awk -F'\t' -v n="$1" -v l="$LANG_ID" '$1==n && $2==l {print $3}'; }
+examples_of() { rows examples.tsv | awk -F'\t' -v n="$1" -v l="$LANG_ID" '$1==n && $2==l && $3!="-" {print $3}'; }
+# Why a language has nothing to run for a step: the note on its "-" row.
+note_of() { rows examples.tsv | awk -F'\t' -v n="$1" -v l="$LANG_ID" '$1==n && $2==l && $3=="-" {print $4}'; }
+
+# The directory actually run: the VB.NET twin when that variant is asked for.
+variant_of() {
+  local dir="$1"
+  if [ "$LANG_ID" = dotnet ] && [ "${TUTORIAL_VARIANT:-}" = vbnet ] && [[ "$dir" == *-csharp ]]; then
+    echo "${dir%-csharp}-vbnet"
+  else
+    echo "$dir"
+  fi
+}
 
 # The broker runs as the rabbitmq user, as it does in the image this one is
 # built on. The cookie is passed on the command line to the server and to every
@@ -48,7 +63,7 @@ start_broker() {
   echo "Starting RabbitMQ (log: $BROKER_LOG) ..."
   mkdir -p "$(dirname "$BROKER_LOG")"
   chown rabbitmq:rabbitmq /var/lib/rabbitmq "$(dirname "$BROKER_LOG")"
-  gosu rabbitmq rabbitmq-server >"$BROKER_LOG" 2>&1 &
+  su-exec rabbitmq rabbitmq-server >"$BROKER_LOG" 2>&1 &
   # The AMQP listener is the last thing a node opens on boot, so a port that
   # accepts a connection is a broker that is ready for one.
   for _ in $(seq 1 120); do
@@ -72,26 +87,41 @@ run_example() {
   case "$LANG_ID" in
     java)   cd "$dir" && java -cp "target/classes:target/dependency/*" "$(cat target/main-class)" ;;
     python) /opt/venv/bin/python "$dir/main.py" ;;
-    ruby)   bundle exec ruby "$dir/main.rb" ;;
-    dotnet) dotnet run --no-build -c Release --project "$dir" ;;
+    # An example with a Gemfile of its own (step 8's Rails one) runs in that bundle.
+    ruby)   if [ -f "$dir/Gemfile" ]; then BUNDLE_GEMFILE="$EXAMPLES/$dir/Gemfile" bundle exec ruby "$dir/main.rb"
+            else bundle exec ruby "$dir/main.rb"; fi ;;
+    # Published by the image build; the .runtimeconfig.json names the program.
+    dotnet) local cfg; cfg="$(echo "$ROOT/bin/${dir//\//_}"/*.runtimeconfig.json)"
+            dotnet "${cfg%.runtimeconfig.json}.dll" ;;
     go)     "$ROOT/bin/${dir//\//_}" ;;
     *)      echo "unknown language $LANG_ID" >&2; return 2 ;;
   esac
 }
 
 run_step() {
-  local n="$1" title dirs dir
+  local n="$1" title dirs dir note
   title="$(rows steps.tsv | awk -F'\t' -v n="$n" '$1==n {print $2}')"
   dirs="$(examples_of "$n")"
-  if [ -z "$title" ] || [ -z "$dirs" ]; then
+  note="$(note_of "$n")"
+  if [ -z "$title" ] || { [ -z "$dirs" ] && [ -z "$note" ]; }; then
     echo "There is no step $n. These are the steps:" >&2
     steps_list >&2
     return 2
   fi
+  if [ -z "$dirs" ]; then
+    echo
+    echo "=== Step $n — $title: nothing to run for $LANG_ID"
+    echo "    $note"
+    return 0
+  fi
   for dir in $dirs; do
+    dir="$(variant_of "$dir")"
     echo
     echo "=== Step $n — $title: $dir"
-    echo "    https://github.com/AceMQ-Company/acemq-$LANG_ID-amqp-examples/tree/$(cat "$ROOT/EXAMPLES_COMMIT")/$dir"
+    case "$dir" in
+      integrations/*) echo "    https://github.com/AceMQ-Company/acemq-tutorials/tree/main/$dir" ;;
+      *) echo "    https://github.com/AceMQ-Company/acemq-$LANG_ID-amqp-examples/tree/$(cat "$ROOT/EXAMPLES_COMMIT")/$dir" ;;
+    esac
     echo
     if ! (run_example "$dir"); then
       echo
@@ -117,6 +147,7 @@ case "$cmd" in
     echo "language        $LANG_ID"
     echo "library         $(cat "$ROOT/LIBRARY_VERSION")"
     echo "examples commit $(cat "$ROOT/EXAMPLES_COMMIT")"
+    [ -f "$ROOT/INTEGRATION_VERSION" ] && echo "integration     $(cat "$ROOT/INTEGRATION_VERSION")"
     rabbitmq-diagnostics --version 2>/dev/null | sed 's/^/rabbitmq        /' || true
     ;;
   step)
@@ -137,12 +168,12 @@ case "$cmd" in
     exec bash
     ;;
   broker)
-    exec gosu rabbitmq rabbitmq-server
+    exec su-exec rabbitmq rabbitmq-server
     ;;
   dirs)
     # Every example directory this language's steps use, once each. The
     # Dockerfile builds exactly these.
-    rows examples.tsv | awk -F'\t' -v l="$LANG_ID" '$2==l {print $3}' | sort -u
+    rows examples.tsv | awk -F'\t' -v l="$LANG_ID" '$2==l && $3!="-" {print $3}' | sort -u
     ;;
   *)
     echo "unknown command: $cmd" >&2
